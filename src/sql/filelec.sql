@@ -3,29 +3,30 @@ Create database filelec;
 Use filelec;
 
 Create table client (
-    idclient int(11) not null auto_increment,
-    nom varchar(30),
-    tel varchar(10) UNIQUE,
-    email varchar(50) UNIQUE,
-    mdp varchar(255),
-    adresse varchar(100),
-    cp varchar(5),
-    ville varchar(50),
-    pays varchar(50),
-    etat enum("Prospect", "Client actif", "Client très actif"),
-    role enum("client", "admin"),
-    nbTentatives int not null default 0,
-    bloque int not null default 0,
-    nbConnexion int not null default 0,
-    type enum("Particulier", "Professionnel"),
-    date_creation_mdp datetime,
-    date_dernier_changement_mdp datetime,
-    date_creation_compte datetime,
-    primary key (idclient)
+idclient int(11) not null auto_increment,
+nom varchar(30),
+tel varchar(10) UNIQUE,
+email varchar(50) UNIQUE,
+mdp varchar(255),
+adresse varchar(100),
+cp varchar(5),
+ville varchar(50),
+pays varchar(50),
+etat enum("Prospect", "Client actif", "Client très actif"),
+role enum("client", "admin"),
+nbTentatives int not null default 0,
+bloque int not null default 0,
+nbConnexion int not null default 0,
+type enum("Particulier", "Professionnel"),
+date_creation_mdp datetime,
+date_dernier_changement_mdp datetime,
+date_creation_compte datetime,
+connected_at datetime,
+primary key (idclient)
 ) ENGINE=InnoDB, CHARSET=utf8;
 
-Create or replace view vclient (idclient, nom, tel, email, mdp, adresse, cp, ville, pays, etat, role, nbTentatives, bloque, nbConnexion, type, date_creation_mdp, date_dernier_changement_mdp, date_creation_compte)
-as select idclient, nom, tel, email, mdp, adresse, cp, ville, pays, etat, role, nbTentatives, bloque, nbConnexion, type, date_format(date_creation_mdp, '%d/%m/%Y %H:%i'), date_format(date_dernier_changement_mdp, '%d/%m/%Y %H:%i'), date_format(date_creation_compte, '%d/%m/%Y %H:%i')
+Create or replace view vclient (idclient, nom, tel, email, mdp, adresse, cp, ville, pays, etat, role, nbTentatives, bloque, nbConnexion, type, date_creation_mdp, date_dernier_changement_mdp, date_creation_compte, connected_at)
+as select idclient, nom, tel, email, mdp, adresse, cp, ville, pays, etat, role, nbTentatives, bloque, nbConnexion, type, date_format(date_creation_mdp, '%d/%m/%Y %H:%i'), date_format(date_dernier_changement_mdp, '%d/%m/%Y %H:%i'), date_format(date_creation_compte, '%d/%m/%Y %H:%i'), date_format(connected_at, '%d/%m/%Y %H:%i')
 from client;
 
 Create table histoClient as select *, sysdate() dateHeureAction, user() user, '__________' action
@@ -38,9 +39,9 @@ Create trigger insertClient
 After insert on client
 For each row
 Begin
-    insert into histoClient select *, sysdate(), user(), 'INSERT'
-    from client
-    where idclient = new.idclient;
+insert into histoClient select *, sysdate(), user(), 'INSERT'
+from client
+where idclient = new.idclient;
 End //
 Delimiter ;
 
@@ -50,9 +51,9 @@ Create trigger updateClient
 Before update on client
 For each row
 Begin
-    insert into histoClient select *, sysdate(), user(), 'UPDATE'
-    from client
-    where idclient = old.idclient;
+insert into histoClient select *, sysdate(), user(), 'UPDATE'
+from client
+where idclient = old.idclient;
 End //
 Delimiter ;
 
@@ -62,36 +63,36 @@ Create trigger deleteClient
 Before delete on client
 For each row
 Begin
-    insert into histoClient select *, sysdate(), user(), 'DELETE'
-    from client
-    where idclient = old.idclient;
+insert into histoClient select *, sysdate(), user(), 'DELETE'
+from client
+where idclient = old.idclient;
 End //
 Delimiter ;
 
 Create table particulier (
-    idclient int(11) not null,
-    nom varchar(30),
-    prenom varchar(30),
-    tel varchar(10) UNIQUE,
-    email varchar(50) UNIQUE,
-    mdp varchar(255),
-    adresse varchar(100),
-    cp varchar(5),
-    ville varchar(50),
-    pays varchar(50),
-    etat enum("Prospect", "Client actif", "Client très actif"),
-    role enum("client", "admin"),
-    nbTentatives int not null default 0,
-    bloque int not null default 0,
-    nbConnexion int not null default 0,
-    type enum("Particulier", "Professionnel"),
-    date_creation_mdp datetime,
-    date_dernier_changement_mdp datetime,
-    date_creation_compte datetime,
-    primary key (idclient),
-    foreign key (idclient) references client (idclient)
-    on update cascade
-    on delete cascade
+idclient int(11) not null,
+nom varchar(30),
+prenom varchar(30),
+tel varchar(10) UNIQUE,
+email varchar(50) UNIQUE,
+mdp varchar(255),
+adresse varchar(100),
+cp varchar(5),
+ville varchar(50),
+pays varchar(50),
+etat enum("Prospect", "Client actif", "Client très actif"),
+role enum("client", "admin"),
+nbTentatives int not null default 0,
+bloque int not null default 0,
+nbConnexion int not null default 0,
+type enum("Particulier", "Professionnel"),
+date_creation_mdp datetime,
+date_dernier_changement_mdp datetime,
+date_creation_compte datetime,
+primary key (idclient),
+foreign key (idclient) references client (idclient)
+on update cascade
+on delete cascade
 ) ENGINE=InnoDB, CHARSET=utf8;
 
 Drop function if exists countTelParticulier;
@@ -99,8 +100,8 @@ Delimiter //
 Create function countTelParticulier(newtel varchar(10))
 returns int
 Begin
-    select count(*) from particulier where tel = newtel into @result;
-    return @result;
+select count(*) from particulier where tel = newtel into @result;
+return @result;
 End //
 Delimiter ;
 
@@ -110,10 +111,10 @@ Create trigger checkTelParticulier
 Before insert on particulier
 For each row
 Begin
-    if countTelParticulier(new.tel)
-        then signal sqlstate '45000'
-        set message_text = 'Telephone deja utilisee !';
-    end if ;
+if countTelParticulier(new.tel)
+then signal sqlstate '45000'
+set message_text = 'Telephone deja utilisee !';
+end if ;
 End //
 Delimiter ;
 
@@ -122,8 +123,8 @@ Delimiter //
 Create function countEmailParticulier(newemail varchar(50))
 returns int
 Begin
-    select count(*) from particulier where email = newemail into @result;
-    return @result;
+select count(*) from particulier where email = newemail into @result;
+return @result;
 End //
 Delimiter ;
 
@@ -133,10 +134,10 @@ Create trigger checkEmailParticulier
 Before insert on particulier
 For each row
 Begin
-    if countEmailParticulier(new.email)
-        then signal sqlstate '45000'
-        set message_text = 'Email deja utilisee !';
-    end if ;
+if countEmailParticulier(new.email)
+then signal sqlstate '45000'
+set message_text = 'Email deja utilisee !';
+end if ;
 End //
 Delimiter ;
 
@@ -144,12 +145,12 @@ Drop procedure if exists insertParticulier;
 Delimiter //
 Create procedure insertParticulier(in p_nom varchar(30), in p_prenom varchar(30), in p_tel varchar(10), in p_email varchar(50), in p_mdp varchar(255), in p_adresse varchar(100), in p_cp varchar(5), in p_ville varchar(50), in p_pays varchar(50), in p_etat enum("Prospect", "Client actif", "Client très actif"), in p_role enum("client", "admin"))
 Begin
-    declare p_idclient int(11);
-    insert into client values (null, p_nom, p_tel, p_email, sha1(p_mdp), p_adresse, p_cp, p_ville, p_pays, p_etat, p_role, 0, 0, 0, 'Particulier', sysdate(), sysdate(), sysdate());
-    select idclient into p_idclient
-    from client
-    where tel = p_tel and email = p_email;
-    insert into particulier values (p_idclient, p_nom, p_prenom, p_tel, p_email, sha1(p_mdp), p_adresse, p_cp, p_ville, p_pays, p_etat, p_role, 0, 0, 0, 'Particulier', sysdate(), sysdate(), sysdate());
+declare p_idclient int(11);
+insert into client values (null, p_nom, p_tel, p_email, sha1(p_mdp), p_adresse, p_cp, p_ville, p_pays, p_etat, p_role, 0, 0, 0, 'Particulier', sysdate(), sysdate(), sysdate(), sysdate());
+select idclient into p_idclient
+from client
+where tel = p_tel and email = p_email;
+insert into particulier values (p_idclient, p_nom, p_prenom, p_tel, p_email, sha1(p_mdp), p_adresse, p_cp, p_ville, p_pays, p_etat, p_role, 0, 0, 0, 'Particulier', sysdate(), sysdate(), sysdate());
 End //
 Delimiter ;
 
@@ -159,16 +160,16 @@ call insertParticulier('LOISELLE', 'Julie', '0451596927', 'julie.loiselle@gmail.
 
 # COMPTE(S) TEST
 -- Compte particulier (admin)
-call insertParticulier('BRUAIRE', 'Tom', '0101010101', 'tom.bruaire@gmail.com', 'Azerty123', '5, rue de Levallois', '92300', 'LEVALLOIS-PERRET', 'France', 'Prospect', 'admin');
+call insertParticulier('BEN HAMDOUNE', 'Tom', '0652518228', 'yassine.benhamdoune@gmail.com', 'Azerty123', '40 rue andree grunig', '95200', 'Sarcelles', 'France', 'Prospect', 'admin');
 
 Drop procedure if exists updateParticulier;
 Delimiter //
 Create procedure updateParticulier(in p_nom varchar(30), in p_prenom varchar(30), in p_tel varchar(10), in p_email varchar(50), in p_mdp varchar(255), in p_adresse varchar(100), in p_cp varchar(5), in p_ville varchar(50), in p_pays varchar(50), in p_etat enum("Prospect", "Client actif", "Client très actif"), in p_role enum("client", "admin"), in p_bloque int, in p_nbConnexion int, in p_date_changement_mdp datetime)
 Begin
-    update client set nom = p_nom, tel = p_tel, email = p_email, mdp = sha1(p_mdp), adresse = p_adresse, cp = p_cp, ville = p_ville, pays = p_pays, etat = p_etat, role = p_role, bloque = p_bloque, nbConnexion = p_nbConnexion, date_dernier_changement_mdp = p_date_changement_mdp
-    where tel = p_tel and email = p_email;
-    update particulier set nom = p_nom, prenom = p_prenom, tel = p_tel, email = p_email, mdp = sha1(p_mdp), adresse = p_adresse, cp = p_cp, ville = p_ville, pays = p_pays, etat = p_etat, role = p_role, bloque = p_bloque, nbConnexion = p_nbConnexion, date_dernier_changement_mdp = p_date_changement_mdp
-    where tel = p_tel and email = p_email;
+update client set nom = p_nom, tel = p_tel, email = p_email, mdp = sha1(p_mdp), adresse = p_adresse, cp = p_cp, ville = p_ville, pays = p_pays, etat = p_etat, role = p_role, bloque = p_bloque, nbConnexion = p_nbConnexion, date_dernier_changement_mdp = p_date_changement_mdp
+where tel = p_tel and email = p_email;
+update particulier set nom = p_nom, prenom = p_prenom, tel = p_tel, email = p_email, mdp = sha1(p_mdp), adresse = p_adresse, cp = p_cp, ville = p_ville, pays = p_pays, etat = p_etat, role = p_role, bloque = p_bloque, nbConnexion = p_nbConnexion, date_dernier_changement_mdp = p_date_changement_mdp
+where tel = p_tel and email = p_email;
 End //
 Delimiter ;
 
@@ -176,33 +177,33 @@ Drop procedure if exists deleteParticulier;
 Delimiter //
 Create procedure deleteParticulier(in p_tel varchar(10), in p_email varchar(50))
 Begin
-    delete from particulier where tel = p_tel and email = p_email;
-    delete from client where tel = p_tel and email = p_email;
+delete from particulier where tel = p_tel and email = p_email;
+delete from client where tel = p_tel and email = p_email;
 End //
 Delimiter ;
 
 Create table professionnel (
-    idclient int(11) not null,
-    nom varchar(30),
-    tel varchar(10) UNIQUE,
-    email varchar(50) UNIQUE,
-    mdp varchar(255),
-    adresse varchar(100),
-    cp varchar(5),
-    ville varchar(50),
-    pays varchar(50),
-    numSIRET varchar(50),
-    statut varchar(30),
-    etat enum("Prospect", "Client actif", "Client très actif"),
-    role enum("client", "admin"),
-    nbTentatives int not null default 0,
-    bloque int not null default 0,
-    nbConnexion int not null default 0,
-    type enum("Particulier", "Professionnel"),
-    date_creation_mdp datetime,
-    date_dernier_changement_mdp datetime,
-    date_creation_compte datetime,
-    primary key (idclient)
+idclient int(11) not null,
+nom varchar(30),
+tel varchar(10) UNIQUE,
+email varchar(50) UNIQUE,
+mdp varchar(255),
+adresse varchar(100),
+cp varchar(5),
+ville varchar(50),
+pays varchar(50),
+numSIRET varchar(50),
+statut varchar(30),
+etat enum("Prospect", "Client actif", "Client très actif"),
+role enum("client", "admin"),
+nbTentatives int not null default 0,
+bloque int not null default 0,
+nbConnexion int not null default 0,
+type enum("Particulier", "Professionnel"),
+date_creation_mdp datetime,
+date_dernier_changement_mdp datetime,
+date_creation_compte datetime,
+primary key (idclient)
 ) ENGINE=InnoDB, CHARSET=utf8;
 
 Drop function if exists countTelProfessionnel;
@@ -210,8 +211,8 @@ Delimiter //
 Create function countTelProfessionnel(newtel varchar(10))
 returns int
 Begin
-    select count(*) from professionnel where tel = newtel into @result;
-    return @result;
+select count(*) from professionnel where tel = newtel into @result;
+return @result;
 End //
 Delimiter ;
 
@@ -221,10 +222,10 @@ Create trigger checkTelProfessionnel
 Before insert on particulier
 For each row
 Begin
-    if countTelProfessionnel(new.tel)
-        then signal sqlstate '45000'
-        set message_text = 'Telephone deja utilisee !';
-    end if ;
+if countTelProfessionnel(new.tel)
+then signal sqlstate '45000'
+set message_text = 'Telephone deja utilisee !';
+end if ;
 End //
 Delimiter ;
 
@@ -233,8 +234,8 @@ Delimiter //
 Create function countEmailProfessionnel(newemail varchar(50))
 returns int
 Begin
-    select count(*) from professionnel where email = newemail into @result;
-    return @result;
+select count(*) from professionnel where email = newemail into @result;
+return @result;
 End //
 Delimiter ;
 
@@ -244,10 +245,10 @@ Create trigger checkEmailProfessionnel
 Before insert on professionnel
 For each row
 Begin
-    if countEmailProfessionnel(new.email)
-        then signal sqlstate '45000'
-        set message_text = 'Email deja utilisee !';
-    end if ;
+if countEmailProfessionnel(new.email)
+then signal sqlstate '45000'
+set message_text = 'Email deja utilisee !';
+end if ;
 End //
 Delimiter ;
 
@@ -255,12 +256,12 @@ Drop procedure if exists insertProfessionnel;
 Delimiter //
 Create procedure insertProfessionnel(in p_nom varchar(30), in p_tel varchar(10), in p_email varchar(50), in p_mdp varchar(255), in p_adresse varchar(100), in p_cp varchar(5), in p_ville varchar(50), in p_pays varchar(50), in p_numSIRET varchar(50), in p_statut varchar(30), in p_etat enum("Prospect", "Client actif", "Client très actif"), in p_role enum("client", "admin"))
 Begin
-    declare p_idclient int(11);
-    insert into client values (null, p_nom, p_tel, p_email, sha1(p_mdp), p_adresse, p_cp, p_ville, p_pays, p_etat, p_role, 0, 0, 0, 'Professionnel', sysdate(), sysdate(), sysdate());
-    select idclient into p_idclient
-    from client
-    where tel = p_tel and email = p_email;
-    insert into professionnel values (p_idclient, p_nom, p_tel, p_email, sha1(p_mdp), p_adresse, p_cp, p_ville, p_pays, p_numSIRET, p_statut, p_etat, p_role, 0, 0, 0, 'Professionnel', sysdate(), sysdate(), sysdate());
+declare p_idclient int(11);
+insert into client values (null, p_nom, p_tel, p_email, sha1(p_mdp), p_adresse, p_cp, p_ville, p_pays, p_etat, p_role, 0, 0, 0, 'Professionnel', sysdate(), sysdate(), sysdate(), sysdate());
+select idclient into p_idclient
+from client
+where tel = p_tel and email = p_email;
+insert into professionnel values (p_idclient, p_nom, p_tel, p_email, sha1(p_mdp), p_adresse, p_cp, p_ville, p_pays, p_numSIRET, p_statut, p_etat, p_role, 0, 0, 0, 'Professionnel', sysdate(), sysdate(), sysdate());
 End //
 Delimiter ;
 
@@ -276,10 +277,10 @@ Drop procedure if exists updateProfessionnel;
 Delimiter //
 Create procedure updateProfessionnel(in p_nom varchar(30), in p_tel varchar(10), in p_email varchar(50), in p_mdp varchar(255), in p_adresse varchar(100), in p_cp varchar(5), in p_ville varchar(50), in p_pays varchar(50), in p_statut varchar(30), in p_etat enum("Prospect", "Client actif", "Client très actif"), in p_role enum("client", "admin"), in p_bloque int, in p_nbConnexion int, in p_date_changement_mdp datetime)
 Begin
-    update client set nom = p_nom, tel = p_tel, email = p_email, mdp = sha1(p_mdp), adresse = p_adresse, cp = p_cp, ville = p_ville, pays = p_pays, etat = p_etat, role = p_role, bloque = p_bloque, nbConnexion = p_nbConnexion, date_dernier_changement_mdp = p_date_changement_mdp
-    where tel = p_tel and email = p_email;
-    update professionnel set nom = p_nom, tel = p_tel, email = p_email, mdp = sha1(p_mdp), adresse = p_adresse, cp = p_cp, ville = p_ville, pays = p_pays, statut = p_statut, etat = p_etat, role = p_role, bloque = p_bloque, nbConnexion = p_nbConnexion, date_dernier_changement_mdp = p_date_changement_mdp
-    where tel = p_tel and email = p_email;
+update client set nom = p_nom, tel = p_tel, email = p_email, mdp = sha1(p_mdp), adresse = p_adresse, cp = p_cp, ville = p_ville, pays = p_pays, etat = p_etat, role = p_role, bloque = p_bloque, nbConnexion = p_nbConnexion, date_dernier_changement_mdp = p_date_changement_mdp
+where tel = p_tel and email = p_email;
+update professionnel set nom = p_nom, tel = p_tel, email = p_email, mdp = sha1(p_mdp), adresse = p_adresse, cp = p_cp, ville = p_ville, pays = p_pays, statut = p_statut, etat = p_etat, role = p_role, bloque = p_bloque, nbConnexion = p_nbConnexion, date_dernier_changement_mdp = p_date_changement_mdp
+where tel = p_tel and email = p_email;
 End //
 Delimiter ;
 
@@ -287,15 +288,15 @@ Drop procedure if exists deleteProfessionnel;
 Delimiter //
 Create procedure deleteProfessionnel(in p_tel varchar(10), in p_email varchar(50))
 Begin
-    delete from professionnel where tel = p_tel and email = p_email;
-    delete from client where tel = p_tel and email = p_email;
+delete from professionnel where tel = p_tel and email = p_email;
+delete from client where tel = p_tel and email = p_email;
 End //
 Delimiter ;
 
 Create table type (
-    idtype int(11) not null auto_increment,
-    libelle varchar(50) not null UNIQUE,
-    primary key (idtype)
+idtype int(11) not null auto_increment,
+libelle varchar(50) not null UNIQUE,
+primary key (idtype)
 ) ENGINE=InnoDB, CHARSET=utf8;
 
 Insert into type values
@@ -319,9 +320,9 @@ Create trigger insertType
 After insert on type
 For each row
 Begin
-    Insert into histoType select *, sysdate(), user(), 'INSERT'
-    From type
-    Where idtype = new.idtype;
+Insert into histoType select *, sysdate(), user(), 'INSERT'
+From type
+Where idtype = new.idtype;
 End //
 Delimiter ;
 
@@ -331,9 +332,9 @@ Create trigger updateType
 Before update on type
 For each row
 Begin
-    Insert into histoType select *, sysdate(), user(), 'UPDATE'
-    From type
-    Where idtype = old.idtype;
+Insert into histoType select *, sysdate(), user(), 'UPDATE'
+From type
+Where idtype = old.idtype;
 End //
 Delimiter ;
 
@@ -343,9 +344,9 @@ Create trigger deleteType
 Before delete on type
 For each row
 Begin
-    Insert into histoType select *, sysdate(), user(), 'DELETE'
-    From type
-    Where idtype = old.idtype;
+Insert into histoType select *, sysdate(), user(), 'DELETE'
+From type
+Where idtype = old.idtype;
 End //
 Delimiter ;
 
@@ -355,26 +356,26 @@ Create trigger checkTypeInsert
 Before insert on type
 For each row
 Begin
-    if new.libelle = (select libelle from type where libelle = new.libelle)
-        then signal sqlstate '45000'
-        set message_text = 'Ce type est déjà enregistré !';
-    end if ;
+if new.libelle = (select libelle from type where libelle = new.libelle)
+then signal sqlstate '45000'
+set message_text = 'Ce type est déjà enregistré !';
+end if ;
 End //
 Delimiter ;
 
 Create table produit (
-    idproduit int(11) not null auto_increment,
-    nomproduit varchar(100) not null UNIQUE,
-    imageproduit varchar(255),
-    descriptionproduit longtext,
-    qteproduit int(3) not null,
-    prixproduit decimal(6,2) not null,
-    idtype int(11) not null,
-    date_ajout datetime,
-    primary key (idproduit),
-    foreign key (idtype) references type (idtype)
-    on update cascade
-    on delete cascade
+idproduit int(11) not null auto_increment,
+nomproduit varchar(100) not null UNIQUE,
+imageproduit varchar(255),
+descriptionproduit longtext,
+qteproduit int(3) not null,
+prixproduit decimal(6,2) not null,
+idtype int(11) not null,
+date_ajout datetime,
+primary key (idproduit),
+foreign key (idtype) references type (idtype)
+on update cascade
+on delete cascade
 ) ENGINE=InnoDB, CHARSET=utf8;
 
 Insert into produit values
@@ -392,10 +393,10 @@ Insert into produit values
 (null, 'PIONEER AVIC-F88DAB', 'PIONEER_AVIC-F88DAB.png', 'Carte de l Europe (45 pays) et info trafic, compatible avec Apple Card Pay et Android Auto.', 8, 1299, 2, sysdate()),
 
 -- Aide à la conduite
-(null, 'CAMERA DE RECUL BEEPER RWEC100X-RF', 'CAMERA_DE_RECUL_BEEPER_RWEC100X-RF.png', 'Angle de vue de 140° horizontale.', 9, 199.99, 3, sysdate()),
-(null, 'CAMERA DE RECUL BEEPER RWE200X-BL', 'CAMERA_DE_RECUL_BEEPER_RWEC200X-BL.png', 'Angle de vue 140° horizontale.', 10, 359.99, 3, sysdate()),
-(null, 'CAMERA EMBARQUEE NEXTBASE NBDVR-101 HD', 'CAMERA_EMBARQUEE_NEXTBASE_NBDVR-101_HD.png', 'Angle de vue 120°, sortie audio AV et microphone integre.', 11, 89.99, 3, sysdate()),
-(null, 'CAMERA DE RECUL + ECRAN BEEPER RW037-P', 'CAMERA_DE_RECUL_+_ECRAN_BEEPER_RW037-P.png', 'Angle de vue 150° horizontale.', 12, 89.99, 3, sysdate()),
+(null, 'CAMERA DE RECUL BEEPER RWEC100X-RF', 'CAMERA_DE_RECUL_BEEPER_RWEC100X-RF.png', 'Angle de vue de 140 horizontale.', 9, 199.99, 3, sysdate()),
+(null, 'CAMERA DE RECUL BEEPER RWE200X-BL', 'CAMERA_DE_RECUL_BEEPER_RWEC200X-BL.png', 'Angle de vue 140 horizontale.', 10, 359.99, 3, sysdate()),
+(null, 'CAMERA EMBARQUEE NEXTBASE NBDVR-101 HD', 'CAMERA_EMBARQUEE_NEXTBASE_NBDVR-101_HD.png', 'Angle de vue 120, sortie audio AV et microphone integre.', 11, 89.99, 3, sysdate()),
+(null, 'CAMERA DE RECUL + ECRAN BEEPER RW037-P', 'CAMERA_DE_RECUL_+_ECRAN_BEEPER_RW037-P.png', 'Angle de vue 150 horizontale.', 12, 89.99, 3, sysdate()),
 
 -- Haut-parleurs
 (null, 'PIONEER Ts-13020 I', 'PIONEER_Ts-13020_I.png', 'Diametre de 13 cm et puissance de 130 Watts.', 13, 22.99, 4, sysdate()),
@@ -431,9 +432,9 @@ Create trigger insertProduit
 After insert on produit
 For each row
 Begin
-    insert into histoProduit select *, sysdate(), user(), 'INSERT'
-    from produit
-    where idproduit = new.idproduit;
+insert into histoProduit select *, sysdate(), user(), 'INSERT'
+from produit
+where idproduit = new.idproduit;
 End //
 Delimiter ;
 
@@ -443,9 +444,9 @@ Create trigger updateProduit
 Before update on produit
 For each row
 Begin
-    insert into histoProduit select *, sysdate(), user(), 'UPDATE'
-    from produit
-    where idproduit = old.idproduit;
+insert into histoProduit select *, sysdate(), user(), 'UPDATE'
+from produit
+where idproduit = old.idproduit;
 End //
 Delimiter ;
 
@@ -455,9 +456,9 @@ Create trigger deleteProduit
 Before delete on produit
 For each row
 Begin
-    insert into histoProduit select *, sysdate(), user(), 'DELETE'
-    from produit
-    where idproduit = old.idproduit;
+insert into histoProduit select *, sysdate(), user(), 'DELETE'
+from produit
+where idproduit = old.idproduit;
 End //
 Delimiter ;
 
@@ -468,10 +469,10 @@ Create trigger verifPrixInsert
 Before insert on produit
 For each row
 Begin
-    if new.prixProduit <= 0
-        then signal sqlstate '45000'
-        set message_text = 'Le prix ne doit pas être inferieur a 0';
-    end if ;
+if new.prixProduit <= 0
+then signal sqlstate '45000'
+set message_text = 'Le prix ne doit pas être inferieur a 0';
+end if ;
 End //
 Delimiter ;
 
@@ -481,31 +482,31 @@ Create trigger verifPrixUpdate
 Before update on produit
 For each row
 Begin
-    if new.prixProduit <= 0
-        then signal sqlstate '45000'
-        set message_text = 'Le prix ne doit pas être inferieur a 0';
-    end if ;
+if new.prixProduit <= 0
+then signal sqlstate '45000'
+set message_text = 'Le prix ne doit pas être inferieur a 0';
+end if ;
 End //
 Delimiter ;
 
 Create table commande (
-    numcommande int(8) not null auto_increment,
-    idclient int(11) not null,
-    mode_payement varchar(50) default null,
-    etat varchar(100) default null,
-    montantTotalHT decimal(12,2),
-    montantTotalTTC decimal(12,2),
-    TVA decimal(12,2),
-    datecommande datetime,
-    datelivraision datetime,
-    idproduit int(11) not null,
-    primary key (numcommande),
-    foreign key (idclient) references client (idclient)
-    on update cascade
-    on delete cascade,
-    foreign key (idproduit) references produit (idproduit)
-    on update cascade
-    on delete cascade
+numcommande int(8) not null auto_increment,
+idclient int(11) not null,
+mode_payement varchar(50) default null,
+etat varchar(100) default null,
+montantTotalHT decimal(12,2),
+montantTotalTTC decimal(12,2),
+TVA decimal(12,2),
+datecommande datetime,
+datelivraision datetime,
+idproduit int(11) not null,
+primary key (numcommande),
+foreign key (idclient) references client (idclient)
+on update cascade
+on delete cascade,
+foreign key (idproduit) references produit (idproduit)
+on update cascade
+on delete cascade
 ) ENGINE=InnoDB, CHARSET=utf8;
 
 Create or replace view vcommande(numcommande, nom, adresse, cp, ville, pays, mode_payement, etat, montantTotalHT, montantTotalTTC, TVA, datecommande, datelivraison, produit)
@@ -528,9 +529,9 @@ Create trigger insertCommande
 After insert on commande
 For each row
 Begin
-    insert into histoCommande select *, sysdate(), user(), 'INSERT'
-    from commande
-    where numcommande = new.numcommande;
+insert into histoCommande select *, sysdate(), user(), 'INSERT'
+from commande
+where numcommande = new.numcommande;
 End //
 Delimiter ;
 
@@ -540,27 +541,27 @@ Create trigger deleteCommande
 Before delete on commande
 For each row
 Begin
-    insert into histoCommande select *, sysdate(), user(), 'DELETE'
-    from commande
-    where numcommande = old.numcommande;
+insert into histoCommande select *, sysdate(), user(), 'DELETE'
+from commande
+where numcommande = old.numcommande;
 End //
 Delimiter ;
 
 Create table panier (
-    numcommande int(8) not null,
-    idproduit int(11) not null,
-    quantite int(3) not null,
-    idclient int(11) not null,
-    primary key (idproduit, idclient),
-    foreign key (numcommande) references commande (numcommande)
-    on update cascade
-    on delete cascade,
-    foreign key (idproduit) references produit (idproduit)
-    on update cascade
-    on delete cascade,
-    foreign key (idclient) references client (idclient)
-    on update cascade
-    on delete cascade
+numcommande int(8) not null,
+idproduit int(11) not null,
+quantite int(3) not null,
+idclient int(11) not null,
+primary key (idproduit),
+foreign key (numcommande) references commande (numcommande)
+on update cascade
+on delete cascade,
+foreign key (idproduit) references produit (idproduit)
+on update cascade
+on delete cascade,
+foreign key (idclient) references client (idclient)
+on update cascade
+on delete cascade
 ) ENGINE=InnoDB, CHARSET=utf8;
 
 Create or replace view vpanier(numcommande, idproduit, nomproduit, prixproduit, quantite, montantTotalHT, montantTotalTTC, nomclient, idclient)
@@ -572,23 +573,23 @@ and pa.idclient = cl.idclient
 group by pa.numcommande;
 
 Create table savecommande (
-    numcommande int(8) not null auto_increment,
-    idclient int(11) not null,
-    mode_payement varchar(50) default null,
-    etat varchar(100) default null,
-    montantTotalHT decimal(12,2),
-    montantTotalTTC decimal(12,2),
-    TVA decimal(12,2),
-    datecommande datetime,
-    datelivraision datetime,
-    idproduit int(11) not null,
-    primary key (numcommande),
-    foreign key (idclient) references client (idclient)
-    on update cascade
-    on delete cascade,
-    foreign key (idproduit) references produit (idproduit)
-    on update cascade
-    on delete cascade
+numcommande int(8) not null auto_increment,
+idclient int(11) not null,
+mode_payement varchar(50) default null,
+etat varchar(100) default null,
+montantTotalHT decimal(12,2),
+montantTotalTTC decimal(12,2),
+TVA decimal(12,2),
+datecommande datetime,
+datelivraision datetime,
+idproduit int(11) not null,
+primary key (numcommande),
+foreign key (idclient) references client (idclient)
+on update cascade
+on delete cascade,
+foreign key (idproduit) references produit (idproduit)
+on update cascade
+on delete cascade
 ) ENGINE=InnoDB, CHARSET=utf8;
 
 Create or replace view vsavecommande(numcommande, nom, adresse, cp, ville, pays, mode_payement, etat, montantTotalHT, montantTotalTTC, TVA, datecommande, datelivraison, produit)
@@ -599,20 +600,20 @@ and co.idproduit = p.idproduit
 group by cl.nom;
 
 Create table savepanier (
-    numcommande int(8) not null,
-    idproduit int(11) not null,
-    quantite int(3) not null,
-    idclient int(11) not null,
-    primary key (idproduit, idclient),
-    foreign key (numcommande) references savecommande (numcommande)
-    on update cascade
-    on delete cascade,
-    foreign key (idproduit) references produit (idproduit)
-    on update cascade
-    on delete cascade,
-    foreign key (idclient) references client (idclient)
-    on update cascade
-    on delete cascade
+numcommande int(8) not null,
+idproduit int(11) not null,
+quantite int(3) not null,
+idclient int(11) not null,
+primary key (idproduit),
+foreign key (numcommande) references savecommande (numcommande)
+on update cascade
+on delete cascade,
+foreign key (idproduit) references produit (idproduit)
+on update cascade
+on delete cascade,
+foreign key (idclient) references client (idclient)
+on update cascade
+on delete cascade
 ) ENGINE=InnoDB, CHARSET=utf8;
 
 Create or replace view vsavepanier(numcommande, idproduit, nomproduit, prixproduit, quantite, montantTotalHT, montantTotalTTC, nomclient, idclient)
@@ -629,21 +630,9 @@ Create trigger transactionInsert
 After insert on panier
 For each row
 Begin
-    update produit
-    set qteproduit = qteproduit - new.quantite
-    where idproduit = new.idproduit;
-End //
-Delimiter ;
-
-Drop trigger if exists transactionInsert2;
-Delimiter //
-Create trigger transactionInsert2
-After insert on savepanier
-For each row
-Begin
-    update produit
-    set qteproduit = qteproduit - new.quantite
-    where idproduit = new.idproduit;
+update produit
+set qteproduit = qteproduit - new.quantite
+where idproduit = new.idproduit;
 End //
 Delimiter ;
 
@@ -653,21 +642,17 @@ Create trigger transactionUpdate
 After update on panier
 For each row
 Begin
-    update produit
-    set qteproduit = qteproduit - new.quantite
-    where idproduit = new.idproduit;
-End //
-Delimiter ;
-
-Drop trigger if exists transactionUpdate2;
-Delimiter //
-Create trigger transactionUpdate2
-After update on savepanier
-For each row
-Begin
-    update produit
-    set qteproduit = qteproduit - new.quantite
-    where idproduit = new.idproduit;
+if old.quantite > new.quantite
+then
+update produit
+set qteproduit = qteproduit + (old.quantite - new.quantite)
+where idproduit = old.idproduit;
+elseif new.quantite > old.quantite
+then
+update produit
+set qteproduit = qteproduit - (new.quantite - old.quantite)
+where idproduit = old.idproduit;
+end if ;
 End //
 Delimiter ;
 
@@ -677,21 +662,9 @@ Create trigger transactionDelete
 After delete on panier
 For each row
 Begin
-    update produit
-    set qteproduit = qteproduit + old.quantite
-    where idproduit = old.idproduit;
-End //
-Delimiter ;
-
-Drop trigger if exists transactionDelete2;
-Delimiter //
-Create trigger transactionDelete2
-After delete on savepanier
-For each row
-Begin
-    update produit
-    set qteproduit = qteproduit + old.quantite
-    where idproduit = old.idproduit;
+update produit
+set qteproduit = qteproduit + old.quantite
+where idproduit = old.idproduit;
 End //
 Delimiter ;
 
@@ -701,16 +674,16 @@ Create trigger calculInsert
 After insert on panier
 For each row
 Begin
-    update commande co
-    set montantTotalHT = montantTotalHT + (
-            select sum(prixproduit * new.quantite)
-            from produit p
-            where p.idproduit = new.idproduit
-            group by new.numcommande
-        ),
-    TVA = montantTotalHT * 0.20,
-    montantTotalTTC = TVA + montantTotalHT
-    where numcommande = new.numcommande;
+update commande co
+set montantTotalHT = montantTotalHT + (
+select sum(prixproduit * new.quantite)
+from produit p
+where p.idproduit = new.idproduit
+group by new.numcommande
+),
+TVA = montantTotalHT * 0.20,
+montantTotalTTC = TVA + montantTotalHT
+where numcommande = new.numcommande;
 End //
 Delimiter ;
 
@@ -720,16 +693,16 @@ Create trigger calculInsert2
 After insert on savepanier
 For each row
 Begin
-    update savecommande co
-    set montantTotalHT = montantTotalHT + (
-            select sum(prixproduit * new.quantite)
-            from produit p
-            where p.idproduit = new.idproduit
-            group by new.numcommande
-        ),
-    TVA = montantTotalHT * 0.20,
-    montantTotalTTC = TVA + montantTotalHT
-    where numcommande = new.numcommande;
+update savecommande co
+set montantTotalHT = montantTotalHT + (
+select sum(prixproduit * new.quantite)
+from produit p
+where p.idproduit = new.idproduit
+group by new.numcommande
+),
+TVA = montantTotalHT * 0.20,
+montantTotalTTC = TVA + montantTotalHT
+where numcommande = new.numcommande;
 End //
 Delimiter ;
 
@@ -739,40 +712,40 @@ Create trigger calculUpdate
 Before update on panier
 For each row
 Begin
-    declare qte int(3);
-    declare mth decimal(10,2) default 0;
-    if new.quantite < old.quantite
-        then
-            set qte = old.quantite - (
-                    select new.quantite
-                    from panier
-                    where numcommande = old.numcommande
-                    and idproduit = old.idproduit
-                );
-            select sum(prixproduit * qte) into mth
-            from produit p
-            where p.idproduit = old.idproduit;
-            update commande
-            set montantTotalHT = montantTotalHT - mth,
-            TVA = montantTotalHT * 0.20,
-            montantTotalTTC = montantTotalHT + TVA
-            where numcommande = old.numcommande;
-    else
-        set qte = (
-                select new.quantite
-                from panier
-                where numcommande = old.numcommande
-                and idproduit = old.idproduit
-            ) - old.quantite;
-        select sum(prixproduit * qte) into mth
-        from produit p
-        where p.idproduit = old.idproduit;
-        update commande
-        set montantTotalHT = montantTotalHT + mth,
-        TVA = montantTotalHT * 0.20,
-        montantTotalTTC = montantTotalHT + TVA
-        where numcommande = new.numcommande;
-    end if ;
+declare qte int(3);
+declare mth decimal(10,2) default 0;
+if new.quantite < old.quantite
+then
+set qte = old.quantite - (
+select new.quantite
+from panier
+where numcommande = old.numcommande
+and idproduit = old.idproduit
+);
+select sum(prixproduit * qte) into mth
+from produit p
+where p.idproduit = old.idproduit;
+update commande
+set montantTotalHT = montantTotalHT - mth,
+TVA = montantTotalHT * 0.20,
+montantTotalTTC = montantTotalHT + TVA
+where numcommande = old.numcommande;
+else
+set qte = (
+select new.quantite
+from panier
+where numcommande = old.numcommande
+and idproduit = old.idproduit
+) - old.quantite;
+select sum(prixproduit * qte) into mth
+from produit p
+where p.idproduit = old.idproduit;
+update commande
+set montantTotalHT = montantTotalHT + mth,
+TVA = montantTotalHT * 0.20,
+montantTotalTTC = montantTotalHT + TVA
+where numcommande = new.numcommande;
+end if ;
 End //
 Delimiter ;
 
@@ -782,40 +755,40 @@ Create trigger calculUpdate2
 Before update on savepanier
 For each row
 Begin
-    declare qte int(3);
-    declare mth decimal(10,2) default 0;
-    if new.quantite < old.quantite
-        then
-            set qte = old.quantite - (
-                    select new.quantite
-                    from savepanier
-                    where numcommande = old.numcommande
-                    and idproduit = old.idproduit
-                );
-            select sum(prixproduit * qte) into mth
-            from produit p
-            where p.idproduit = old.idproduit;
-            update savecommande
-            set montantTotalHT = montantTotalHT - mth,
-            TVA = montantTotalHT * 0.20,
-            montantTotalTTC = montantTotalHT + TVA
-            where numcommande = old.numcommande;
-    else
-        set qte = (
-                select new.quantite
-                from savepanier
-                where numcommande = old.numcommande
-                and idproduit = old.idproduit
-            ) - old.quantite;
-        select sum(prixproduit * qte) into mth
-        from produit p
-        where p.idproduit = old.idproduit;
-        update savecommande
-        set montantTotalHT = montantTotalHT + mth,
-        TVA = montantTotalHT * 0.20,
-        montantTotalTTC = montantTotalHT + TVA
-        where numcommande = new.numcommande;
-    end if ;
+declare qte int(3);
+declare mth decimal(10,2) default 0;
+if new.quantite < old.quantite
+then
+set qte = old.quantite - (
+select new.quantite
+from savepanier
+where numcommande = old.numcommande
+and idproduit = old.idproduit
+);
+select sum(prixproduit * qte) into mth
+from produit p
+where p.idproduit = old.idproduit;
+update savecommande
+set montantTotalHT = montantTotalHT - mth,
+TVA = montantTotalHT * 0.20,
+montantTotalTTC = montantTotalHT + TVA
+where numcommande = old.numcommande;
+else
+set qte = (
+select new.quantite
+from savepanier
+where numcommande = old.numcommande
+and idproduit = old.idproduit
+) - old.quantite;
+select sum(prixproduit * qte) into mth
+from produit p
+where p.idproduit = old.idproduit;
+update savecommande
+set montantTotalHT = montantTotalHT + mth,
+TVA = montantTotalHT * 0.20,
+montantTotalTTC = montantTotalHT + TVA
+where numcommande = new.numcommande;
+end if ;
 End //
 Delimiter ;
 
@@ -825,15 +798,15 @@ Create trigger calculDelete
 Before delete on panier
 For each row
 Begin
-    update commande
-    set montantTotalHT = montantTotalHT - (
-            select sum(prixproduit * old.quantite)
-            from produit p
-            where p.idproduit = old.idproduit
-        ),
-    TVA = montantTotalHT * 0.20,
-    montantTotalTTC = montantTotalHT + TVA
-    where numcommande = old.numcommande;
+update commande
+set montantTotalHT = montantTotalHT - (
+select sum(prixproduit * old.quantite)
+from produit p
+where p.idproduit = old.idproduit
+),
+TVA = montantTotalHT * 0.20,
+montantTotalTTC = montantTotalHT + TVA
+where numcommande = old.numcommande;
 End //
 Delimiter ;
 
@@ -843,15 +816,15 @@ Create trigger calculDelete2
 Before delete on savepanier
 For each row
 Begin
-    update savecommande
-    set montantTotalHT = montantTotalHT - (
-            select sum(prixproduit * old.quantite)
-            from produit p
-            where p.idproduit = old.idproduit
-        ),
-    TVA = montantTotalHT * 0.20,
-    montantTotalTTC = montantTotalHT + TVA
-    where numcommande = old.numcommande;
+update savecommande
+set montantTotalHT = montantTotalHT - (
+select sum(prixproduit * old.quantite)
+from produit p
+where p.idproduit = old.idproduit
+),
+TVA = montantTotalHT * 0.20,
+montantTotalTTC = montantTotalHT + TVA
+where numcommande = old.numcommande;
 End //
 Delimiter ;
 
@@ -859,14 +832,12 @@ Drop procedure if exists insertCommande;
 Delimiter //
 Create procedure insertCommande(in p_idclient int(11), in p_datelivraison datetime, in p_idproduit int(11), in p_quantite int(3))
 Begin
-    declare p_numcommande int(8);
-    insert into commande values (null, p_idclient, null, null, 0, 0, 0, sysdate(), p_datelivraison, p_idproduit);
-    insert into savecommande values (null, p_idclient, null, null, 0, 0, 0, sysdate(), p_datelivraison, p_idproduit);
-    select numcommande into p_numcommande
-    from savecommande
-    where idclient = p_idclient and idproduit = p_idproduit;
-    insert into panier values (p_numcommande, p_idproduit, p_quantite, p_idclient);
-    insert into savepanier values (p_numcommande, p_idproduit, p_quantite, p_idclient);
+declare p_numcommande int(8);
+insert into commande values (null, p_idclient, null, null, 0, 0, 0, sysdate(), p_datelivraison, p_idproduit);
+insert into savecommande values (null, p_idclient, null, null, 0, 0, 0, sysdate(), p_datelivraison, p_idproduit);
+select last_insert_id() into p_numcommande;
+insert into panier values (p_numcommande, p_idproduit, p_quantite, p_idclient);
+insert into savepanier values (p_numcommande, p_idproduit, p_quantite, p_idclient);
 End //
 Delimiter ;
 
@@ -880,27 +851,31 @@ Drop procedure if exists deleteCommande;
 Delimiter //
 Create procedure deleteCommande(in p_numcommande int(8), in p_idproduit int(11), in p_idclient int(11))
 Begin
-    delete from commande where numcommande = p_numcommande and idproduit = p_idproduit and idclient = p_idclient;
-    delete from panier where numcommande = p_numcommande and idproduit = p_idproduit and idclient = p_idclient;
+declare qte int(3);
+select quantite into qte from panier where idproduit = p_idproduit and idclient = p_idclient;
+update produit set qteproduit = qteproduit + qte where idproduit = p_idproduit;
+delete from commande where numcommande = p_numcommande and idproduit = p_idproduit and idclient = p_idclient;
+delete from panier where numcommande = p_numcommande and idproduit = p_idproduit and idclient = p_idclient;
 End //
 Delimiter ;
 
 Create table facture (
-    idfacture int(11) not null auto_increment,
-    datefacture datetime,
-    idclient int(11) not null,
-    idproduit int(11) not null,
-    numcommande int(8) not null,
-    primary key (idfacture),
-    foreign key (idclient) references client (idclient)
-    on update cascade
-    on delete cascade,
-    foreign key (idproduit) references produit (idproduit)
-    on update cascade
-    on delete cascade,
-    foreign key (numcommande) references savecommande (numcommande)
-    on update cascade
-    on delete cascade
+idfacture int(11) not null auto_increment,
+datefacture datetime,
+idclient int(11) not null,
+idproduit int(11) not null,
+numcommande int(8) not null,
+quantite int(3) not null,
+primary key (idfacture),
+foreign key (idclient) references client (idclient)
+on update cascade
+on delete cascade,
+foreign key (idproduit) references produit (idproduit)
+on update cascade
+on delete cascade,
+foreign key (numcommande) references savecommande (numcommande)
+on update cascade
+on delete cascade
 ) ENGINE=InnoDB, CHARSET=utf8;
 
 Create or replace view vfacture(idfacture, datefacture, idclient, nom, email, adresse, cp, ville, pays, idproduit, produit, prix, montantTotalHT, montantTotalTTC, TVA, datecommande, datelivraison, numcommande, mode_payement, etat, quantite)
@@ -917,23 +892,26 @@ group by f.numcommande;
 
 Drop procedure if exists insertFacture;
 Delimiter //
-Create procedure insertFacture(in p_idclient int(11), in p_idproduit int(11), in p_numcommande int(8))
+Create procedure insertFacture(in p_idclient int(11), in p_idproduit int(11), in p_numcommande int(8), in p_quantite int(3))
 Begin
-    insert into facture values (null, sysdate(), p_idclient, p_idproduit, p_numcommande);
+declare qte int(3);
+select quantite into qte from panier where idproduit = p_idproduit and idclient = p_idclient;
+update produit set qteproduit = qteproduit - qte where idproduit = p_idproduit;
+insert into facture values (null, sysdate(), p_idclient, p_idproduit, p_numcommande, p_quantite);
 End //
 Delimiter ;
 
 Create table message (
-    idmessage int(11) not null auto_increment,
-    id_exp int(11) not null,
-    id_dest int(11) not null,
-    date_envoi datetime,
-    contenu longtext,
-    lu int not null default 0,
-    primary key (idmessage, id_exp, id_dest),
-    foreign key (id_dest) references client (idclient)
-    on update cascade
-    on delete cascade
+idmessage int(11) not null auto_increment,
+id_exp int(11) not null,
+id_dest int(11) not null,
+date_envoi datetime,
+contenu longtext,
+lu int not null default 0,
+primary key (idmessage, id_exp, id_dest),
+foreign key (id_dest) references client (idclient)
+on update cascade
+on delete cascade
 ) ENGINE=InnoDB, CHARSET=utf8;
 
 Insert into message values
@@ -950,11 +928,11 @@ and m1.date_envoi = m2.date_envoi
 group by m2.idmessage;
 
 Create table admin (
-    idadmin int(11) not null auto_increment,
-    email varchar(50) UNIQUE,
-    mdp varchar(50),
-    droit int not null default 0,
-    primary key (idadmin)
+idadmin int(11) not null auto_increment,
+email varchar(50) UNIQUE,
+mdp varchar(50),
+droit int not null default 0,
+primary key (idadmin)
 ) ENGINE=InnoDB, CHARSET=utf8;
 
 Drop trigger if exists modifierMdp;
@@ -963,26 +941,26 @@ Create trigger modifierMdp
 Before insert on admin
 For each row
 Begin
-    set new.mdp = sha1(new.mdp);
+set new.mdp = sha1(new.mdp);
 End //
 Delimiter ;
 
 Insert into admin values (null, 'admin@gmail.com', '123', 1);
 
 Create table commentaire (
-    idcom int(11) not null auto_increment,
-    idproduit int(11) not null,
-    idclient int(11) not null,
-    contenu longtext not null,
-    client_id int(11) not null,
-    dateheurepost datetime,
-    primary key (idcom),
-    foreign key (idproduit) references produit (idproduit)
-    on update cascade
-    on delete cascade,
-    foreign key (idclient) references client (idclient)
-    on update cascade
-    on delete cascade
+idcom int(11) not null auto_increment,
+idproduit int(11) not null,
+idclient int(11) not null,
+contenu longtext not null,
+client_id int(11) not null,
+dateheurepost datetime,
+primary key (idcom),
+foreign key (idproduit) references produit (idproduit)
+on update cascade
+on delete cascade,
+foreign key (idclient) references client (idclient)
+on update cascade
+on delete cascade
 ) ENGINE=InnoDB, CHARSET=utf8;
 
 Create or replace view vcommentaire(idcom, idproduit, idclient, contenu, client_id, dateheurepost) 
@@ -994,39 +972,39 @@ on co.idclient = cl.idclient
 group by co.idcom;
 
 Create table BDD (
-    nom_bdd varchar(60) not null,
-    nb_views int,
-    nb_triggers int,
-    nb_procedures int,
-    nb_functions int,
-    primary key (nom_bdd)
+nom_bdd varchar(60) not null,
+nb_views int,
+nb_triggers int,
+nb_procedures int,
+nb_functions int,
+primary key (nom_bdd)
 ) ENGINE=InnoDB;
 
 Drop procedure if exists statsbdd;
 Delimiter //
 Create procedure statsbdd(nomBdd varchar(60))
 Begin
-    declare nbview, nbtrigger, nbprocedure, nbfunction int;
-    
-    select count(*) into nbview 
-    from information_schema.views
-    where TABLE_SCHEMA = nomBdd;
+declare nbview, nbtrigger, nbprocedure, nbfunction int;
 
-    select count(*) into nbtrigger
-    from information_schema.triggers
-    where TRIGGER_SCHEMA = nomBdd;
+select count(*) into nbview 
+from information_schema.views
+where TABLE_SCHEMA = nomBdd;
 
-    select count(*) into nbprocedure
-    from information_schema.ROUTINES
-    where ROUTINE_SCHEMA = nomBdd
-    and ROUTINE_TYPE = 'procedure';
+select count(*) into nbtrigger
+from information_schema.triggers
+where TRIGGER_SCHEMA = nomBdd;
 
-    select count(*) into nbfunction
-    from information_schema.ROUTINES
-    where ROUTINE_SCHEMA = nomBdd
-    and ROUTINE_TYPE = 'function';
+select count(*) into nbprocedure
+from information_schema.ROUTINES
+where ROUTINE_SCHEMA = nomBdd
+and ROUTINE_TYPE = 'procedure';
 
-    insert into BDD values (nomBdd, nbview, nbtrigger, nbprocedure, nbfunction);
+select count(*) into nbfunction
+from information_schema.ROUTINES
+where ROUTINE_SCHEMA = nomBdd
+and ROUTINE_TYPE = 'function';
+
+insert into BDD values (nomBdd, nbview, nbtrigger, nbprocedure, nbfunction);
 End //
 Delimiter ;
 
@@ -1034,22 +1012,22 @@ Select * from BDD;
 
 Create or replace view vstatsproduits as
 SELECT
-    ifnull(nomproduit, 'TOTAL') nomproduit,
-    SUM(IF(libelle='Autoradio', prixproduit, "")) AS 'autoradio',
-    SUM(IF(libelle='GPS', prixproduit, "")) AS 'gps',
-    SUM(IF(libelle='Aide à la conduite', prixproduit, "")) AS 'aide_a_la_conduite',
-    SUM(IF(libelle='Haut-parleurs', prixproduit, "")) AS 'haut_parleurs',
-    SUM(IF(libelle='Kit mains-libre', prixproduit, "")) AS 'kit_mains_libre',
-    SUM(IF(libelle='Amplificateur', prixproduit, "")) AS 'amplificateurs'
+ifnull(nomproduit, 'TOTAL') nomproduit,
+SUM(IF(libelle='Autoradio', prixproduit, "")) AS 'autoradio',
+SUM(IF(libelle='GPS', prixproduit, "")) AS 'gps',
+SUM(IF(libelle='Aide à la conduite', prixproduit, "")) AS 'aide_a_la_conduite',
+SUM(IF(libelle='Haut-parleurs', prixproduit, "")) AS 'haut_parleurs',
+SUM(IF(libelle='Kit mains-libre', prixproduit, "")) AS 'kit_mains_libre',
+SUM(IF(libelle='Amplificateur', prixproduit, "")) AS 'amplificateurs'
 FROM vproduit
 GROUP BY nomproduit with rollup;
 
 Select * from vstatsproduits;
 
 Create table question (
-    idquestion int(11) not null auto_increment,
-    enonce longtext,
-    primary key (idquestion)
+idquestion int(11) not null auto_increment,
+enonce longtext,
+primary key (idquestion)
 ) ENGINE=InnoDB, CHARSET=utf8;
 
 Insert into question values
@@ -1059,17 +1037,17 @@ Insert into question values
 (null, "Quel est le nom de famille de votre professeur d'enfance préféré ?");
 
 Create table reponse (
-    idreponse int(11) not null auto_increment,
-    idquestion int(11) not null,
-    reponse text,
-    idclient int(11) not null,
-    primary key (idreponse),
-    foreign key (idquestion) references question (idquestion)
-    on update cascade
-    on delete cascade,
-    foreign key (idclient) references client (idclient)
-    on update cascade
-    on delete cascade
+idreponse int(11) not null auto_increment,
+idquestion int(11) not null,
+reponse text,
+idclient int(11) not null,
+primary key (idreponse),
+foreign key (idquestion) references question (idquestion)
+on update cascade
+on delete cascade,
+foreign key (idclient) references client (idclient)
+on update cascade
+on delete cascade
 ) ENGINE=InnoDB, CHARSET=utf8;
 
 Insert into reponse values
@@ -1091,18 +1069,18 @@ Drop procedure if exists insertReponse;
 Delimiter //
 Create procedure insertReponse(in p_enonce longtext, in p_reponse text, in p_email varchar(50), in p_mdp varchar(255))
 Begin
-    declare p_idquestion int(11);
-    declare p_idclient int(11);
+declare p_idquestion int(11);
+declare p_idclient int(11);
 
-    select idquestion into p_idquestion
-    from question
-    where enonce = p_enonce;
+select idquestion into p_idquestion
+from question
+where enonce = p_enonce;
 
-    select idclient into p_idclient
-    from client
-    where email = p_email and mdp = sha1(p_mdp);
+select idclient into p_idclient
+from client
+where email = p_email and mdp = sha1(p_mdp);
 
-    insert into reponse values (null, p_idquestion, p_reponse, p_idclient);
+insert into reponse values (null, p_idquestion, p_reponse, p_idclient);
 End //
 Delimiter ;
 
@@ -1114,19 +1092,4 @@ order by t.libelle;
 
 call statsbdd('filelec');
 
-Select * from BDD;
-
-/*
--- Moins de 3 mois
-update client set date_dernier_changement_mdp = '2022-01-30 17:08:12' where idclient = 4;
-
--- Moins de 3 mois et (>) 4 jours
-update client set date_dernier_changement_mdp = '2022-01-25 17:08:12' where idclient = 4;
-
-select * from client where idclient = 4 \G
-*/
-
--- update client set date_dernier_changement_mdp = '2022-01-30 17:08:12' where idclient = 4;
--- update client set date_dernier_changement_mdp = '2022-01-25 17:08:12' where idclient = 4;
-
-select * from client where idclient = 4 \G
+select * from BDD;
